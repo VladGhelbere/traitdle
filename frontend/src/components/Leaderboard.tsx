@@ -3,20 +3,12 @@ import { gameService } from '../lib/gameService';
 import { playerService } from '../lib/playerService';
 import { Category } from '../types';
 
-interface LeaderboardEntry {
-  id: string;
-  player_id: string;
-  mode: string;
-  time_spent: number;
-  incorrect_count: number;
-  created_at: string;
-}
-
-interface DailyStats {
+interface DistributionStats {
   totalPlayers: number;
   winRate: number;
   averageTime: number;
   averageIncorrect: number;
+  distribution: number[]; // Percentage of players at each mistake level (0-5)
 }
 
 interface LeaderboardProps {
@@ -27,41 +19,35 @@ interface LeaderboardProps {
 }
 
 export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, isOpen, onClose }) => {
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
+  const [stats, setStats] = useState<DistributionStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const currentPlayerId = playerService.getPlayerId();
+  const [userResult, setUserResult] = useState<{ incorrectCount: number; won: boolean } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      loadLeaderboard();
+      loadDistributionStats();
     }
   }, [isOpen, puzzleId, category]);
 
-  const loadLeaderboard = async () => {
+  const loadDistributionStats = async () => {
     setLoading(true);
     try {
-      // Load leaderboard entries
-      const leaderboardData = await gameService.getLeaderboard(puzzleId, category, 20);
-      setEntries(leaderboardData);
+      // Load distribution stats
+      const distributionData = await gameService.getDistributionStats(category);
+      setStats(distributionData);
 
-      // Load daily stats
-      const stats = await gameService.getDailyStats(category);
-      setDailyStats(stats);
+      // Get current user's result for today
+      const playerId = playerService.getPlayerId();
+      const userResultData = await gameService.getUserTodayResult(playerId, category);
+      setUserResult(userResultData);
     } catch (error) {
-      console.error('Failed to load leaderboard:', error);
+      console.error('Failed to load distribution stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
   if (!isOpen) return null;
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-  };
 
   const getCategoryEmoji = () => {
     switch (category) {
@@ -70,6 +56,21 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, is
       case 'games': return '🎮';
       default: return '🎯';
     }
+  };
+
+  const getBarLabel = (index: number): string => {
+    if (index === 5) return 'Lost';
+    return `${index} mistake${index !== 1 ? 's' : ''}`;
+  };
+
+  const getBarColor = (index: number, isUserResult: boolean): string => {
+    if (isUserResult) {
+      return index === 5 ? 'bg-red-500' : 'bg-blue-500';
+    }
+    if (index === 5) return 'bg-red-400 dark:bg-red-600';
+    if (index === 0) return 'bg-green-500 dark:bg-green-600';
+    if (index <= 2) return 'bg-green-400 dark:bg-green-500';
+    return 'bg-yellow-400 dark:bg-yellow-500';
   };
 
   return (
@@ -86,90 +87,80 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, is
         </button>
 
         <h2 className="text-2xl font-bold mb-2 text-center dark:text-white">
-          {getCategoryEmoji()} Leaderboard
+          {getCategoryEmoji()} Today's Results
         </h2>
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-4">
-          Today's top players
+          How players performed today
         </p>
 
-        {/* Daily stats */}
-        {dailyStats && (
-          <div className="grid grid-cols-4 gap-2 mb-6 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <div className="text-center">
-              <div className="text-lg font-bold dark:text-white">{dailyStats.totalPlayers}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Players</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">{dailyStats.winRate}%</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold dark:text-white">{formatTime(dailyStats.averageTime)}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Avg Time</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold dark:text-white">{dailyStats.averageIncorrect}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Avg Wrong</div>
-            </div>
-          </div>
-        )}
-
-        {/* Leaderboard list */}
         {loading ? (
           <div className="text-center py-8">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        ) : entries.length === 0 ? (
+        ) : !stats || stats.totalPlayers === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <p>No winners yet today!</p>
+            <p>No players yet today!</p>
             <p className="text-sm mt-1">Be the first to complete the puzzle.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {entries.map((entry, index) => {
-              const isCurrentPlayer = entry.player_id === currentPlayerId;
-              
-              return (
-                <div
-                  key={entry.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg ${
-                    isCurrentPlayer ? 'bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500' :
-                    index === 0 ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                    index === 1 ? 'bg-gray-200 dark:bg-gray-600' :
-                    index === 2 ? 'bg-orange-100 dark:bg-orange-900/30' :
-                    'bg-gray-50 dark:bg-gray-700'
-                  }`}
-                >
-                  {/* Rank */}
-                  <div className="w-8 h-8 flex items-center justify-center font-bold text-lg">
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-                  </div>
-                  
-                  {/* Stats */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium dark:text-white">
-                        {isCurrentPlayer ? '⭐ You' : `Player #${playerService.getDisplayId(entry.player_id)}`}
-                      </span>
-                      {entry.mode === 'hard' && (
-                        <span className="text-xs px-1.5 py-0.5 bg-purple-200 dark:bg-purple-800 text-purple-700 dark:text-purple-300 rounded">
-                          Hard
+          <>
+            {/* Summary stats */}
+            <div className="grid grid-cols-4 gap-2 mb-6 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <div className="text-center">
+                <div className="text-lg font-bold dark:text-white">{stats.totalPlayers}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Players</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600 dark:text-green-400">{stats.winRate}%</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold dark:text-white">{stats.averageTime}s</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Avg Time</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold dark:text-white">{stats.averageIncorrect}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Avg Wrong</div>
+              </div>
+            </div>
+
+            {/* Distribution bars */}
+            <h3 className="font-bold mb-3 dark:text-white text-sm">Player Distribution</h3>
+            <div className="space-y-2">
+              {stats.distribution.map((percentage, index) => {
+                const isUserResult = userResult && (
+                  (userResult.won && userResult.incorrectCount === index) ||
+                  (!userResult.won && index === 5)
+                );
+                
+                return (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-20 text-xs font-medium dark:text-white text-right">
+                      {getBarLabel(index)}
+                    </div>
+                    <div className="flex-1 h-7 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden relative">
+                      <div
+                        className={`h-full flex items-center justify-end px-2 text-white text-xs font-bold transition-all ${getBarColor(index, !!isUserResult)} ${isUserResult ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}
+                        style={{ width: `${Math.max(percentage, percentage > 0 ? 8 : 0)}%` }}
+                      >
+                        {percentage > 0 && `${percentage}%`}
+                      </div>
+                      {isUserResult && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+                          ⭐ You
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatTime(entry.time_spent)} • {entry.incorrect_count} wrong
-                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
 
-        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">
-          Ranked by fewest wrong guesses, then fastest time
-        </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-4">
+              Shows percentage of players at each mistake level
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

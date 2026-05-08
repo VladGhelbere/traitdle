@@ -33,13 +33,13 @@ const TraitInput: React.FC<TraitInputProps> = ({ onSubmit, isDisabled, mode }) =
           onChange={(e) => setInput(e.target.value)}
           disabled={isDisabled}
           placeholder={placeholder}
-          className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-lg"
+          className="flex-1 min-w-0 px-3 sm:px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base sm:text-lg"
           autoFocus
         />
         <button
           type="submit"
           disabled={isDisabled || !input.trim()}
-          className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 font-semibold transition-colors"
+          className="px-4 sm:px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 font-semibold transition-colors whitespace-nowrap flex-shrink-0"
         >
           Guess
         </button>
@@ -62,9 +62,46 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
   const [gameOver, setGameOver] = useState(false);
   const [animatingSlot, setAnimatingSlot] = useState<number | null>(null);
   const [shakeInput, setShakeInput] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: FeedbackType } | null>(null);
+
+  // Show hint after 2 incorrect guesses
+  useEffect(() => {
+    if (incorrectCount >= 2 && !showHint && !gameOver) {
+      setShowHint(true);
+    }
+  }, [incorrectCount, showHint, gameOver]);
+
+  // Generate a hint based on the puzzle
+  const getHint = (): string => {
+    if (!puzzle) return '';
+    
+    const answer = puzzle.answer.toUpperCase();
+    const category = puzzle.category;
+    
+    // Different hint strategies
+    const hints: string[] = [];
+    
+    // Hint 1: First letter
+    hints.push(`The answer starts with "${answer[0]}"`);
+    
+    // Hint 2: Word length
+    hints.push(`The answer has ${answer.length} letters`);
+    
+    // Hint 3: Category-specific hints
+    if (category === 'jobs') {
+      hints.push(`Think about professions that match these traits`);
+    } else if (category === 'movies') {
+      hints.push(`Think about famous films with these characteristics`);
+    } else if (category === 'games') {
+      hints.push(`Think about popular video games with these qualities`);
+    }
+    
+    // Return first letter + length hint combined
+    return `💡 Hint: Starts with "${answer[0]}" and has ${answer.length} letters`;
+  };
 
   // Clear animation states after animation completes
   useEffect(() => {
@@ -278,6 +315,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
           </div>
         </div>
       </div>
+
+      {/* Hint display - shows after 2 incorrect guesses in normal mode */}
+      {showHint && mode === 'normal' && !gameOver && (
+        <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg text-center animate-fade-in">
+          <p className="text-yellow-800 dark:text-yellow-200 text-sm font-medium">
+            {getHint()}
+          </p>
+        </div>
+      )}
 
       {/* Input */}
       <div className={`mb-6 sm:mb-8 ${shakeInput ? 'animate-shake' : ''}`}>

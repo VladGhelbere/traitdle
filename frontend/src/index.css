@@ -95,6 +95,16 @@ button:disabled {
   .text-responsive {
     font-size: clamp(0.75rem, 2.5vw, 1rem);
   }
+  
+  /* Ensure header doesn't overflow */
+  header .flex {
+    flex-wrap: nowrap;
+  }
+  
+  /* Prevent input/button overflow */
+  form .flex {
+    flex-wrap: nowrap;
+  }
 }
 
 /* Touch-friendly buttons */

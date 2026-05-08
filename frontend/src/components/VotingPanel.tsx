@@ -122,7 +122,12 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     const today = new Date();
-    const diffDays = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // Reset time parts for accurate day comparison
+    today.setHours(0, 0, 0, 0);
+    const puzzleDate = new Date(date);
+    puzzleDate.setHours(0, 0, 0, 0);
+    
+    const diffDays = Math.ceil((puzzleDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     
     if (diffDays === 1) return 'tomorrow';
     if (diffDays <= 7) return `in ${diffDays} days`;
@@ -146,9 +151,9 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
   return (
     <div className="w-full max-w-md mx-auto p-4 sm:p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <h3 className="text-lg font-bold mb-2 text-center dark:text-white">
-        Help build {formatDate(traitPair.puzzleDate)}'s puzzle!
+        Help shape a future puzzle!
       </h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">
+      <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-2">
         Which trait better describes{' '}
         <span className="font-semibold text-blue-600 dark:text-blue-400">
           {traitPair.answer}
@@ -156,7 +161,7 @@ export const VotingPanel: React.FC<VotingPanelProps> = ({
         ?
       </p>
       <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-4">
-        ({getCategoryLabel(traitPair.category)})
+        {getCategoryLabel(traitPair.category)} puzzle coming {formatDate(traitPair.puzzleDate)}
       </p>
       
       <div className="grid grid-cols-2 gap-3 sm:gap-4">

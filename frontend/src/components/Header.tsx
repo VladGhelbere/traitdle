@@ -33,12 +33,12 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <button 
           onClick={onTitleClick}
-          className="text-left hover:opacity-80 transition-opacity flex items-center gap-3"
+          className="text-left hover:opacity-80 transition-opacity flex items-center gap-3 flex-shrink-0"
         >
           <img 
             src={traitdleLogo} 
             alt="Traitdle" 
-            className="h-12 sm:h-14 w-auto"
+            className="h-10 sm:h-14 w-auto object-contain max-w-[120px] sm:max-w-none"
             onError={(e) => {
               // Fallback to text if image fails to load
               e.currentTarget.style.display = 'none';
