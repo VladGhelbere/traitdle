@@ -237,5 +237,100 @@ export const gameService = {
         ? Number((wins.reduce((sum, r) => sum + r.incorrect_count, 0) / wins.length).toFixed(1))
         : 0
     };
+  },
+
+  async getDistributionStats(category?: Category) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    let query = supabase
+      .from('game_results')
+      .select(`
+        won,
+        time_spent,
+        incorrect_count,
+        puzzle:puzzles!inner(date, category)
+      `)
+      .eq('puzzles.date', today);
+
+    if (category) {
+      query = query.eq('puzzles.category', category);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Distribution stats error:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        totalPlayers: 0,
+        winRate: 0,
+        averageTime: 0,
+        averageIncorrect: 0,
+        distribution: [0, 0, 0, 0, 0, 0] // 0-4 mistakes + lost
+      };
+    }
+
+    const totalPlayers = data.length;
+    const wins = data.filter(r => r.won);
+    const losses = data.filter(r => !r.won);
+
+    // Calculate distribution: index 0-4 = wins with that many mistakes, index 5 = losses
+    const distribution = [0, 0, 0, 0, 0, 0];
+    
+    wins.forEach(r => {
+      const mistakes = Math.min(r.incorrect_count, 4);
+      distribution[mistakes]++;
+    });
+    
+    distribution[5] = losses.length;
+
+    // Convert to percentages
+    const distributionPercentages = distribution.map(count => 
+      Math.round((count / totalPlayers) * 100)
+    );
+
+    return {
+      totalPlayers,
+      winRate: Math.round((wins.length / totalPlayers) * 100),
+      averageTime: wins.length > 0 
+        ? Math.round(wins.reduce((sum, r) => sum + r.time_spent, 0) / wins.length)
+        : 0,
+      averageIncorrect: wins.length > 0
+        ? Number((wins.reduce((sum, r) => sum + r.incorrect_count, 0) / wins.length).toFixed(1))
+        : 0,
+      distribution: distributionPercentages
+    };
+  },
+
+  async getUserTodayResult(playerId: string, category?: Category) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    let query = supabase
+      .from('game_results')
+      .select(`
+        won,
+        incorrect_count,
+        puzzle:puzzles!inner(date, category)
+      `)
+      .eq('puzzles.date', today)
+      .eq('player_id', playerId);
+
+    if (category) {
+      query = query.eq('puzzles.category', category);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return {
+      won: data.won,
+      incorrectCount: data.incorrect_count
+    };
   }
 };
