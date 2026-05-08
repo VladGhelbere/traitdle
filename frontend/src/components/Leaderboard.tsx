@@ -143,14 +143,16 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, is
                         className={`h-full flex items-center justify-end px-2 text-white text-xs font-bold transition-all ${getBarColor(index, !!isUserResult)} ${isUserResult ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}
                         style={{ width: `${Math.max(percentage, percentage > 0 ? 8 : 0)}%` }}
                       >
-                        {percentage > 0 && `${percentage}%`}
+                        {percentage > 0 && (
+                          isUserResult ? `⭐${percentage}%` : `${percentage}%`
+                        )}
                       </div>
-                      {isUserResult && (
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs">
-                          ⭐ You
-                        </span>
-                      )}
                     </div>
+                    {isUserResult && (
+                      <span className="text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                        You
+                      </span>
+                    )}
                   </div>
                 );
               })}
