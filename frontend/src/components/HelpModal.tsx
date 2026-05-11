@@ -39,12 +39,15 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           </p>
           <div className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
             <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded">
-              <strong>Normal:</strong> See 5 traits → Guess the answer
+              <strong>Normal:</strong> See 5 traits → Type your guess for the answer
             </div>
             <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-800">
-              <strong className="text-red-600 dark:text-red-400">EXTREME:</strong> See the answer → Guess all 5 traits
+              <strong className="text-red-600 dark:text-red-400">EXTREME:</strong> See the answer → Pick the 5 correct traits from a word bank of 30 options
             </div>
           </div>
+          <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">
+            ⚠️ In EXTREME mode, if you lose you <strong>cannot retry</strong> - but you'll see which traits you missed!
+          </p>
         </div>
 
         {/* Feedback explanation */}
@@ -85,14 +88,16 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
             <li>You have 5 incorrect guesses before game over</li>
             <li>Correct guesses don't count against you</li>
             <li>Synonyms (yellow) give you a hint but don't fill slots</li>
-            <li>Win = locked out for the day. Lose = you can retry!</li>
+            <li><strong>Normal:</strong> Win = locked out. Lose = you can retry!</li>
+            <li><strong>EXTREME:</strong> Win OR lose = locked out (no retries!)</li>
             <li>A new puzzle is available every day at midnight</li>
+            <li>Separate leaderboards for Normal and EXTREME modes</li>
           </ul>
         </div>
 
         {/* Example */}
         <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-          <h3 className="font-bold text-lg mb-2 dark:text-white">💡 Example</h3>
+          <h3 className="font-bold text-lg mb-2 dark:text-white">💡 Example (Normal Mode)</h3>
           <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
             You see these 5 traits:
           </p>
@@ -105,6 +110,28 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             Answer: <strong>FIREFIGHTER</strong> 🚒
+          </p>
+        </div>
+
+        {/* EXTREME Example */}
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800">
+          <h3 className="font-bold text-lg mb-2 dark:text-white">🔥 Example (EXTREME Mode)</h3>
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
+            You see the answer: <strong>FIREFIGHTER</strong> 🚒
+          </p>
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
+            Pick the 5 correct traits from 30 options:
+          </p>
+          <div className="flex flex-wrap gap-1 mb-2">
+            <span className="px-2 py-1 bg-green-500 text-white rounded text-xs">brave ✓</span>
+            <span className="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-xs">creative</span>
+            <span className="px-2 py-1 bg-green-500 text-white rounded text-xs">strong ✓</span>
+            <span className="px-2 py-1 bg-red-400 text-white rounded text-xs line-through">patient ✗</span>
+            <span className="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-xs">skilled</span>
+            <span className="px-2 py-1 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded text-xs">...</span>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-xs">
+            5 correct traits hidden among 25 decoys from other puzzles!
           </p>
         </div>
 

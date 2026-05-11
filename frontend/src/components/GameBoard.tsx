@@ -3,6 +3,7 @@ import { GameMode, Puzzle, PlayerGuess, FeedbackType } from '../types';
 import { gameService } from '../lib/gameService';
 import { soundService } from '../lib/soundService';
 import { Toast } from './Toast';
+import { WordBank } from './WordBank';
 
 interface TraitInputProps {
   onSubmit: (guess: string) => void;
@@ -64,8 +65,33 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
   const [shakeInput, setShakeInput] = useState(false);
   const [showHint, setShowHint] = useState(false);
   
+  // Word bank state for extreme mode
+  const [wordBankOptions, setWordBankOptions] = useState<string[]>([]);
+  const [wordBankLoading, setWordBankLoading] = useState(false);
+  const [correctWordBankWords, setCorrectWordBankWords] = useState<string[]>([]);
+  const [incorrectWordBankWords, setIncorrectWordBankWords] = useState<string[]>([]);
+  
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: FeedbackType } | null>(null);
+
+  // Load word bank options for extreme mode
+  useEffect(() => {
+    if (mode === 'hard' && puzzle?.id) {
+      loadWordBankOptions();
+    }
+  }, [mode, puzzle?.id]);
+
+  const loadWordBankOptions = async () => {
+    setWordBankLoading(true);
+    try {
+      const options = await gameService.getWordBankOptions(puzzle.id, puzzle.category);
+      setWordBankOptions(options);
+    } catch (error) {
+      console.error('Failed to load word bank options:', error);
+    } finally {
+      setWordBankLoading(false);
+    }
+  };
 
   // Show hint after 2 incorrect guesses
   useEffect(() => {
@@ -203,6 +229,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
         setAnimatingSlot(result.slotPosition - 1);
         showToast('Trait found!', 'correct');
         
+        // Track correct word for word bank
+        setCorrectWordBankWords(prev => [...prev, guess.toLowerCase()]);
+        
         const newSlots = [...filledSlots];
         newSlots[result.slotPosition - 1] = guess;
         setFilledSlots(newSlots);
@@ -224,10 +253,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
         } else {
           showToast('Close! Try the exact word', 'partial');
         }
+        // Track as incorrect for word bank (partial matches don't count)
+        setIncorrectWordBankWords(prev => [...prev, guess.toLowerCase()]);
       } else if (result.feedback === 'incorrect') {
         soundService.playIncorrect();
         setShakeInput(true);
         showToast('Not a trait', 'incorrect');
+        
+        // Track incorrect word for word bank
+        setIncorrectWordBankWords(prev => [...prev, guess.toLowerCase()]);
+        
         const newIncorrectCount = incorrectCount + 1;
         setIncorrectCount(newIncorrectCount);
 
@@ -266,7 +301,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
         )}
         {mode === 'hard' && (
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Guess the 5 traits that define this {puzzle.category === 'jobs' ? 'job' : puzzle.category === 'movies' ? 'movie' : 'game'}
+            Select the 5 traits that define this {puzzle.category === 'jobs' ? 'job' : puzzle.category === 'movies' ? 'movie' : 'game'} from the word bank below
           </p>
         )}
       </div>
@@ -325,13 +360,36 @@ export const GameBoard: React.FC<GameBoardProps> = ({ puzzle, mode, onGuess, onG
         </div>
       )}
 
-      {/* Input */}
-      <div className={`mb-6 sm:mb-8 ${shakeInput ? 'animate-shake' : ''}`}>
-        <TraitInput onSubmit={handleGuess} isDisabled={gameOver} mode={mode} />
-      </div>
+      {/* Input - Text input for normal mode, Word Bank for extreme mode */}
+      {mode === 'normal' ? (
+        <div className={`mb-6 sm:mb-8 ${shakeInput ? 'animate-shake' : ''}`}>
+          <TraitInput onSubmit={handleGuess} isDisabled={gameOver} mode={mode} />
+        </div>
+      ) : (
+        <div className={`mb-6 sm:mb-8 ${shakeInput ? 'animate-shake' : ''}`}>
+          {wordBankLoading ? (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Loading word bank...</p>
+            </div>
+          ) : wordBankOptions.length > 0 ? (
+            <WordBank
+              words={wordBankOptions}
+              selectedWords={[...correctWordBankWords, ...incorrectWordBankWords]}
+              correctWords={correctWordBankWords}
+              incorrectWords={incorrectWordBankWords}
+              onWordClick={handleGuess}
+              disabled={gameOver}
+            />
+          ) : (
+            // Fallback to text input if word bank fails to load
+            <TraitInput onSubmit={handleGuess} isDisabled={gameOver} mode={mode} />
+          )}
+        </div>
+      )}
 
-      {/* Guess history */}
-      {guesses.length > 0 && (
+      {/* Guess history - only show for normal mode since word bank shows state visually */}
+      {guesses.length > 0 && mode === 'normal' && (
         <div className="mt-6 sm:mt-8">
           <h3 className="font-bold mb-3 text-sm dark:text-white">Guess History:</h3>
           <div className="flex flex-wrap gap-2">

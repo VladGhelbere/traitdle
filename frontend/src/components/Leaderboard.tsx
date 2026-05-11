@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { gameService } from '../lib/gameService';
 import { playerService } from '../lib/playerService';
-import { Category } from '../types';
+import { Category, GameMode } from '../types';
 
 interface DistributionStats {
   totalPlayers: number;
@@ -14,31 +14,43 @@ interface DistributionStats {
 interface LeaderboardProps {
   puzzleId?: string;
   category?: Category;
+  currentMode?: GameMode;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, isOpen, onClose }) => {
+export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, currentMode, isOpen, onClose }) => {
   const [stats, setStats] = useState<DistributionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [userResult, setUserResult] = useState<{ incorrectCount: number; won: boolean } | null>(null);
+  const [selectedMode, setSelectedMode] = useState<GameMode>(currentMode || 'normal');
+
+  useEffect(() => {
+    if (isOpen) {
+      // Reset to current mode when opening
+      if (currentMode) {
+        setSelectedMode(currentMode);
+      }
+      loadDistributionStats();
+    }
+  }, [isOpen, puzzleId, category, currentMode]);
 
   useEffect(() => {
     if (isOpen) {
       loadDistributionStats();
     }
-  }, [isOpen, puzzleId, category]);
+  }, [selectedMode]);
 
   const loadDistributionStats = async () => {
     setLoading(true);
     try {
-      // Load distribution stats
-      const distributionData = await gameService.getDistributionStats(category);
+      // Load distribution stats filtered by mode
+      const distributionData = await gameService.getDistributionStats(category, selectedMode);
       setStats(distributionData);
 
       // Get current user's result for today
       const playerId = playerService.getPlayerId();
-      const userResultData = await gameService.getUserTodayResult(playerId, category);
+      const userResultData = await gameService.getUserTodayResult(playerId, category, selectedMode);
       setUserResult(userResultData);
     } catch (error) {
       console.error('Failed to load distribution stats:', error);
@@ -92,6 +104,32 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ puzzleId, category, is
         <p className="text-center text-gray-500 dark:text-gray-400 text-sm mb-4">
           How players performed today
         </p>
+
+        {/* Mode toggle */}
+        <div className="flex justify-center mb-4">
+          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 p-1 bg-gray-100 dark:bg-gray-700">
+            <button
+              onClick={() => setSelectedMode('normal')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedMode === 'normal'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              Normal
+            </button>
+            <button
+              onClick={() => setSelectedMode('hard')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                selectedMode === 'hard'
+                  ? 'bg-white dark:bg-gray-600 text-orange-600 dark:text-orange-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              🔥 Extreme
+            </button>
+          </div>
+        </div>
 
         {loading ? (
           <div className="text-center py-8">

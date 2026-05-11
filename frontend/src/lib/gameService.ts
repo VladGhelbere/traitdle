@@ -239,7 +239,7 @@ export const gameService = {
     };
   },
 
-  async getDistributionStats(category?: Category) {
+  async getDistributionStats(category?: Category, mode?: GameMode) {
     const today = new Date().toISOString().split('T')[0];
     
     let query = supabase
@@ -248,12 +248,17 @@ export const gameService = {
         won,
         time_spent,
         incorrect_count,
+        mode,
         puzzle:puzzles!inner(date, category)
       `)
       .eq('puzzles.date', today);
 
     if (category) {
       query = query.eq('puzzles.category', category);
+    }
+
+    if (mode) {
+      query = query.eq('mode', mode);
     }
 
     const { data, error } = await query;
@@ -305,7 +310,7 @@ export const gameService = {
     };
   },
 
-  async getUserTodayResult(playerId: string, category?: Category) {
+  async getUserTodayResult(playerId: string, category?: Category, mode?: GameMode) {
     const today = new Date().toISOString().split('T')[0];
     
     let query = supabase
@@ -313,6 +318,7 @@ export const gameService = {
       .select(`
         won,
         incorrect_count,
+        mode,
         puzzle:puzzles!inner(date, category)
       `)
       .eq('puzzles.date', today)
@@ -320,6 +326,10 @@ export const gameService = {
 
     if (category) {
       query = query.eq('puzzles.category', category);
+    }
+
+    if (mode) {
+      query = query.eq('mode', mode);
     }
 
     const { data, error } = await query.maybeSingle();
@@ -332,5 +342,94 @@ export const gameService = {
       won: data.won,
       incorrectCount: data.incorrect_count
     };
+  },
+
+  /**
+   * Get word bank options for extreme mode
+   * Returns 30 words: 5 correct traits for THIS puzzle + 25 decoys from OTHER puzzles in the same category
+   */
+  async getWordBankOptions(puzzleId: string, category: Category): Promise<string[]> {
+    // Get the correct traits for this puzzle - first try traits table
+    const { data: puzzleData, error: puzzleError } = await supabase
+      .from('puzzles')
+      .select(`
+        id,
+        traits (keyword)
+      `)
+      .eq('id', puzzleId)
+      .single();
+
+    if (puzzleError || !puzzleData) {
+      console.error('Error loading puzzle traits:', puzzleError);
+      return [];
+    }
+
+    // These are the 5 correct answers for this puzzle
+    let correctTraits = puzzleData.traits?.map((t: { keyword: string }) => t.keyword.toLowerCase()) || [];
+    
+    // If no traits in traits table, fall back to candidate_traits (top 5 voted)
+    if (correctTraits.length === 0) {
+      console.log('No traits in traits table, loading from candidate_traits...');
+      
+      const { data: candidateData, error: candidateError } = await supabase
+        .from('candidate_traits')
+        .select('word, vote_count')
+        .eq('puzzle_id', puzzleId)
+        .order('vote_count', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(5);
+      
+      if (candidateError) {
+        console.error('Error loading candidate traits:', candidateError);
+      } else if (candidateData && candidateData.length > 0) {
+        correctTraits = candidateData.map((ct: { word: string }) => ct.word.toLowerCase());
+        console.log('Loaded correct traits from candidate_traits:', correctTraits);
+      }
+    }
+    
+    // If still no correct traits, return empty (puzzle is misconfigured)
+    if (correctTraits.length === 0) {
+      console.error('No correct traits found for puzzle:', puzzleId);
+      return [];
+    }
+    
+    // Get candidate traits from OTHER puzzles in the same category (these are the decoys)
+    // These are traits that belong to other answers, not this one
+    const { data: decoyData, error: decoyError } = await supabase
+      .from('candidate_traits')
+      .select(`
+        word,
+        puzzle:puzzles!inner(category)
+      `)
+      .eq('puzzles.category', category)
+      .neq('puzzle_id', puzzleId);
+
+    if (decoyError) {
+      console.error('Error loading decoy traits:', decoyError);
+      return correctTraits; // Return just correct traits if decoys fail
+    }
+
+    // Filter out any words that happen to match the correct traits and deduplicate
+    const decoyWords = decoyData
+      ?.map((d: { word: string }) => d.word.toLowerCase())
+      .filter((word: string) => !correctTraits.includes(word)) || [];
+    
+    // Deduplicate decoys
+    const uniqueDecoys = [...new Set(decoyWords)];
+    
+    // Shuffle and take 25 decoys from other puzzles
+    const shuffledDecoys = uniqueDecoys.sort(() => Math.random() - 0.5).slice(0, 25);
+    
+    // Combine the 5 correct traits with 25 decoys and shuffle everything
+    const allWords = [...correctTraits, ...shuffledDecoys];
+    const shuffledWords = allWords.sort(() => Math.random() - 0.5);
+    
+    console.log('Word bank loaded:', {
+      correctTraits,
+      decoyCount: shuffledDecoys.length,
+      totalWords: shuffledWords.length
+    });
+    
+    return shuffledWords;
   }
 };

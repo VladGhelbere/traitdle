@@ -107,10 +107,12 @@ function App() {
     soundService.playClick();
     setCategory(selected);
     
-    // Check if already WON this category today (losses can retry)
+    // Check if already completed this category today
+    // - Wins always block retry (both modes)
+    // - Losses block retry only in extreme/hard mode
     const existingResult = getCategoryResult(selected);
-    if (existingResult && existingResult.won) {
-      // Already won - show results
+    if (existingResult && (existingResult.won || existingResult.mode === 'hard')) {
+      // Already completed (won, or lost in extreme mode) - show results
       setMode(existingResult.mode);
       setGameResult({
         won: existingResult.won,
@@ -281,10 +283,13 @@ function App() {
 
         {state === 'alreadyPlayed' && gameResult && (
           <div className="text-center max-w-2xl mx-auto bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-lg animate-fade-in">
-            <div className="text-5xl mb-4">✅</div>
-            <h2 className="text-2xl font-bold mb-2 dark:text-white">Already Played!</h2>
+            <div className="text-5xl mb-4">{gameResult.won ? '✅' : '💥'}</div>
+            <h2 className="text-2xl font-bold mb-2 dark:text-white">
+              {gameResult.won ? 'Already Played!' : 'Already Attempted!'}
+            </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              You've already completed today's <span className="font-semibold capitalize">{category}</span> puzzle.
+              You've already {gameResult.won ? 'completed' : 'attempted'} today's <span className="font-semibold capitalize">{category}</span> puzzle
+              {!gameResult.won && mode === 'hard' && ' in Extreme mode'}.
             </p>
             
             {/* Previous result summary */}
@@ -295,7 +300,25 @@ function App() {
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 Answer: <span className="font-bold">{puzzle?.answer}</span>
               </p>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
+              {/* Show missed traits for extreme mode losses */}
+              {!gameResult.won && mode === 'hard' && puzzle?.traits && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-2">
+                    Traits you missed:
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {puzzle.traits.map((trait, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 rounded text-xs font-medium"
+                      >
+                        {trait.keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">
                 Time: {gameResult.timeSpent}s • Mistakes: {gameResult.incorrectCount}/5
               </p>
               <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
@@ -365,12 +388,39 @@ function App() {
             ) : (
               <>
                 <h2 className="text-3xl font-bold mb-4 dark:text-white">💥 Game Over</h2>
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-2">
-                  Better luck next time!
-                </p>
-                <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
-                  The answer was: <span className="font-bold">{puzzle?.answer}</span>
-                </p>
+                {mode === 'hard' ? (
+                  // EXTREME mode: Show answer and missed traits, no retry
+                  <>
+                    <p className="text-lg text-gray-600 dark:text-gray-300 mb-2">
+                      The answer was: <span className="font-bold">{puzzle?.answer}</span>
+                    </p>
+                    {/* Show missed traits in extreme mode */}
+                    {puzzle?.traits && (
+                      <div className="mt-4 mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                        <p className="text-sm font-semibold text-red-700 dark:text-red-300 mb-2">
+                          Traits you missed:
+                        </p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {puzzle.traits
+                            .filter(trait => !gameResult.filledSlots.includes(trait.keyword))
+                            .map((trait, i) => (
+                              <span
+                                key={i}
+                                className="px-3 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 rounded-full text-sm font-medium"
+                              >
+                                {trait.keyword}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Normal mode: Don't show answer, allow retry
+                  <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
+                    Better luck next time! You can try again.
+                  </p>
+                )}
               </>
             )}
             
@@ -425,12 +475,15 @@ function App() {
                 Leaderboard
               </button>
               
-              <button
-                onClick={handlePlayAgain}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
-              >
-                Play Again
-              </button>
+              {/* Only show Play Again for normal mode losses, or for wins */}
+              {(gameResult.won || mode === 'normal') && (
+                <button
+                  onClick={handlePlayAgain}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 transition-colors"
+                >
+                  {gameResult.won ? 'Play Again' : 'Try Again'}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -460,6 +513,7 @@ function App() {
         onClose={() => setShowLeaderboard(false)}
         puzzleId={puzzle?.id}
         category={category || undefined}
+        currentMode={mode || undefined}
       />
       
       {/* Confetti celebration */}
