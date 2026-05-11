@@ -14,20 +14,23 @@ Choose from three daily categories:
 
 | Mode | How It Works |
 |------|--------------|
-| **Normal** (default) | See 5 traits → Guess the job/movie/game |
-| **🔥 EXTREME** | See the answer → Guess all 5 traits |
+| **Normal** (default) | See 5 traits → Guess the job/movie/game. If you lose, you can try again! |
+| **🔥 EXTREME** | See the answer → Select the 5 correct traits from a word bank of 30 options. No retries if you lose! |
 
 Toggle EXTREME mode using the button in the header for a harder challenge!
 
 ### Feedback System
 - 🟩 **Green** - Correct trait!
-- 🟨 **Yellow** - Close! You guessed a synonym (try the exact word)
+- 🟨 **Yellow** - Close! You guessed a synonym (try the exact word) - Normal mode only
 - ⬛ **Incorrect** - Not a trait for this answer
 
 ### Rules
 - 5 incorrect guesses = Game Over
-- One puzzle per category per day (win locks you out, loss lets you retry)
+- One puzzle per category per day
+- **Normal mode**: Win locks you out, loss lets you retry
+- **EXTREME mode**: Win OR loss locks you out (no retries!) - missed traits are shown at the end
 - New puzzles at midnight
+- Separate leaderboards for Normal and EXTREME modes
 
 ## ✨ Features
 
@@ -42,6 +45,7 @@ Toggle EXTREME mode using the button in the header for a harder challenge!
 - Guess distribution histogram
 - Share results with emoji grid
 - Countdown timer to next puzzle
+- **Separate leaderboards for Normal and EXTREME modes**
 
 ### Social Features
 - Daily leaderboard (ranked by fewest mistakes, then fastest time)
@@ -192,17 +196,23 @@ FROM puzzles WHERE answer = 'DOCTOR' AND date = '2026-06-07';
     └────┬────┘
     Yes  │  No
     ▼    ▼
-┌───────┐ ┌─────────────┐
-│ Vote  │ │ Try Again?  │
-└───┬───┘ └──────┬──────┘
-    │       Yes  │  No
-    ▼       ▼    ▼
-┌─────────────────┐
-│    Results      │ (Stats, Share, Leaderboard)
-└─────────────────┘
+┌───────┐ ┌─────────────────────────┐
+│ Vote  │ │ Mode?                   │
+└───┬───┘ └───────────┬─────────────┘
+    │         Normal  │  EXTREME
+    │            ▼    ▼
+    │     ┌──────────┐ ┌──────────────────┐
+    │     │Try Again │ │ Show missed      │
+    │     └────┬─────┘ │ traits, no retry │
+    │          │       └────────┬─────────┘
+    ▼          ▼                ▼
+┌─────────────────────────────────────────┐
+│    Results (Stats, Share, Leaderboard)  │
+└─────────────────────────────────────────┘
 
-Note: Winning locks you out for the day.
-      Losing lets you retry the same category.
+Note: Winning always locks you out for the day.
+      Losing in Normal mode lets you retry.
+      Losing in EXTREME mode locks you out (shows missed traits).
 ```
 
 ## 📝 Adding Content
