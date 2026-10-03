@@ -27,7 +27,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
         <div className="mb-6">
           <h3 className="font-bold text-lg mb-2 dark:text-white">🎯 The Goal</h3>
           <p className="text-gray-600 dark:text-gray-300">
-            Each puzzle shows you 5 <strong>traits</strong> (adjectives/qualities). Guess what job, movie, or game they describe!
+            Each puzzle gives you a job, movie, or game. Find the 5 <strong>traits</strong> (adjectives/qualities) that describe it!
           </p>
         </div>
 
@@ -39,10 +39,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           </p>
           <div className="space-y-2 text-gray-600 dark:text-gray-300 text-sm">
             <div className="p-2 bg-gray-50 dark:bg-gray-700 rounded">
-              <strong>Normal:</strong> See 5 traits → Type your guess for the answer
+              <strong>Normal:</strong> See the answer → Pick the 5 correct traits from a word bank of 30 options
             </div>
             <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-800">
-              <strong className="text-red-600 dark:text-red-400">EXTREME:</strong> See the answer → Pick the 5 correct traits from a word bank of 30 options
+              <strong className="text-red-600 dark:text-red-400">EXTREME:</strong> See 5 traits → Type your guess for the answer
             </div>
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">
@@ -99,25 +99,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
         <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
           <h3 className="font-bold text-lg mb-2 dark:text-white">💡 Example (Normal Mode)</h3>
           <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
-            You see these 5 traits:
-          </p>
-          <div className="flex flex-wrap gap-2 mb-3">
-            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">brave</span>
-            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">strong</span>
-            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">calm</span>
-            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">selfless</span>
-            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">quick</span>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Answer: <strong>FIREFIGHTER</strong> 🚒
-          </p>
-        </div>
-
-        {/* EXTREME Example */}
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800">
-          <h3 className="font-bold text-lg mb-2 dark:text-white">🔥 Example (EXTREME Mode)</h3>
-          <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
-            You see the answer: <strong>FIREFIGHTER</strong> 🚒
+            You see: <strong>FIREFIGHTER</strong> 🚒
           </p>
           <p className="text-gray-600 dark:text-gray-300 text-sm mb-2">
             Pick the 5 correct traits from 30 options:
@@ -132,6 +114,24 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-xs">
             5 correct traits hidden among 25 decoys from other puzzles!
+          </p>
+        </div>
+
+        {/* EXTREME Example */}
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800">
+          <h3 className="font-bold text-lg mb-2 dark:text-white">🔥 Example (EXTREME Mode)</h3>
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-3">
+            You see these 5 traits:
+          </p>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">brave</span>
+            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">strong</span>
+            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">calm</span>
+            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">selfless</span>
+            <span className="px-2 py-1 bg-blue-500 text-white rounded text-sm">quick</span>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Answer: <strong>FIREFIGHTER</strong> 🚒
           </p>
         </div>
 
