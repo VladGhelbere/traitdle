@@ -18,7 +18,8 @@ export interface Synonym {
 
 export interface Puzzle {
   id: string;
-  date: string;
+  date?: string;
+  day_of_year?: number;
   category: Category;
   answer: string;
   traits?: Trait[];
