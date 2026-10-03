@@ -2,18 +2,32 @@ import { supabase } from './client.js';
 import { Puzzle, Category, GameMode, FeedbackType } from '../types.js';
 import { playerService } from './playerService.js';
 
+// Helper function to get day of year (1-365)
+function getDayOfYear(date: Date = new Date()): number {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  // Handle leap years: if day > 365, wrap to 365
+  return Math.min(dayOfYear, 365);
+}
+
 export const gameService = {
   async getDailyPuzzle(category: Category, _mode: GameMode): Promise<Puzzle> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const dayOfYear = getDayOfYear(today);
+    const todayStr = today.toISOString().split('T')[0];
     
-    console.log('Loading puzzle for:', category, today);
+    console.log('Loading puzzle for:', category, 'day of year:', dayOfYear, 'date:', todayStr);
     
-    // First, try to load puzzle with existing traits
+    // Query by day_of_year for cycling puzzles (jobs only for now)
+    // Fall back to date for other categories that may not have day_of_year
     const { data, error } = await supabase
       .from('puzzles')
       .select(`
         id,
         date,
+        day_of_year,
         category,
         answer,
         traits (
@@ -29,7 +43,7 @@ export const gameService = {
         )
       `)
       .eq('category', category)
-      .eq('date', today)
+      .eq('day_of_year', dayOfYear)
       .maybeSingle();
 
     if (error) {
@@ -38,7 +52,7 @@ export const gameService = {
     }
     
     if (!data) {
-      throw new Error(`No puzzle found for ${category} on ${today}. Have you run the migrations in Supabase SQL Editor?`);
+      throw new Error(`No puzzle found for ${category} on day ${dayOfYear}. Have you run the 365_jobs_migration.sql in Supabase SQL Editor?`);
     }
     
     // If no traits exist, get top 5 from candidate_traits (voted traits)
@@ -155,7 +169,7 @@ export const gameService = {
   },
 
   async getLeaderboard(puzzleId?: string, category?: Category, limit: number = 20) {
-    const today = new Date().toISOString().split('T')[0];
+    const dayOfYear = getDayOfYear();
     
     let query = supabase
       .from('game_results')
@@ -166,10 +180,10 @@ export const gameService = {
         time_spent,
         incorrect_count,
         created_at,
-        puzzle:puzzles!inner(id, date, category)
+        puzzle:puzzles!inner(id, day_of_year, category)
       `)
       .eq('won', true)
-      .eq('puzzles.date', today)
+      .eq('puzzles.day_of_year', dayOfYear)
       .order('incorrect_count', { ascending: true })
       .order('time_spent', { ascending: true })
       .limit(limit);
@@ -193,7 +207,7 @@ export const gameService = {
   },
 
   async getDailyStats(category?: Category) {
-    const today = new Date().toISOString().split('T')[0];
+    const dayOfYear = getDayOfYear();
     
     let query = supabase
       .from('game_results')
@@ -201,9 +215,9 @@ export const gameService = {
         won,
         time_spent,
         incorrect_count,
-        puzzle:puzzles!inner(date, category)
+        puzzle:puzzles!inner(day_of_year, category)
       `)
-      .eq('puzzles.date', today);
+      .eq('puzzles.day_of_year', dayOfYear);
 
     if (category) {
       query = query.eq('puzzles.category', category);
@@ -240,7 +254,7 @@ export const gameService = {
   },
 
   async getDistributionStats(category?: Category, mode?: GameMode) {
-    const today = new Date().toISOString().split('T')[0];
+    const dayOfYear = getDayOfYear();
     
     let query = supabase
       .from('game_results')
@@ -249,9 +263,9 @@ export const gameService = {
         time_spent,
         incorrect_count,
         mode,
-        puzzle:puzzles!inner(date, category)
+        puzzle:puzzles!inner(day_of_year, category)
       `)
-      .eq('puzzles.date', today);
+      .eq('puzzles.day_of_year', dayOfYear);
 
     if (category) {
       query = query.eq('puzzles.category', category);
@@ -311,7 +325,7 @@ export const gameService = {
   },
 
   async getUserTodayResult(playerId: string, category?: Category, mode?: GameMode) {
-    const today = new Date().toISOString().split('T')[0];
+    const dayOfYear = getDayOfYear();
     
     let query = supabase
       .from('game_results')
@@ -319,9 +333,9 @@ export const gameService = {
         won,
         incorrect_count,
         mode,
-        puzzle:puzzles!inner(date, category)
+        puzzle:puzzles!inner(day_of_year, category)
       `)
-      .eq('puzzles.date', today)
+      .eq('puzzles.day_of_year', dayOfYear)
       .eq('player_id', playerId);
 
     if (category) {
